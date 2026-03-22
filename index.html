@@ -109,7 +109,6 @@ input.ai-input::placeholder{color:var(--text3)}
         <button id="copyHex">copy hex</button>
         <button id="addBtn" class="btn-primary">+ save</button>
       </div>
-      <div class="contrast-info" id="contrastInfo"></div>
       <div class="section-label">Harmony</div>
       <div class="scheme-tabs">
         <button class="stab active" data-scheme="complement">complement</button>
@@ -136,6 +135,10 @@ input.ai-input::placeholder{color:var(--text3)}
     </div>
   </div>
   <div class="palette-row" id="savedRow"><span class="empty-msg">No colors saved yet</span></div>
+
+  <div class="divider"></div>
+  <div class="section-label">Contrast Preview</div>
+  <div class="contrast-info" id="contrastInfo" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:10px;width:100%"></div>
 
 
 
@@ -192,7 +195,43 @@ function drawWheel(){const cx=120,cy=120,r=116;ctx.clearRect(0,0,240,240);for(le
 function hueToXY(h){const rad=h*Math.PI/180;return{x:120+Math.cos(rad)*90,y:120+Math.sin(rad)*90}}
 function updateCursor(){const{x,y}=hueToXY(H);cur.style.left=x+'px';cur.style.top=y+'px';cur.style.background=hsl2hex(H,S,L)}
 
-function updateContrast(){const hex=hsl2hex(H,S,L);const cw=contrast(hex,'#ffffff'),cb=contrast(hex,'#000000');const gw=wcagGrade(+cw),gb=wcagGrade(+cb);contrastInfo.innerHTML=`<span>vs white: ${cw}:1 <b style="color:${gw.ok?'#4ade80':'#f87171'}">${gw.grade}</b></span><span>vs black: ${cb}:1 <b style="color:${gb.ok?'#4ade80':'#f87171'}">${gb.grade}</b></span>`}
+function updateContrast(){
+  let html='';
+  const addBlock=(bg, fg, labelBg, labelFg)=>{
+    const cc=contrast(bg, fg);
+    const cg=wcagGrade(+cc);
+    const checkIcon = cg.ok ? '✓' : '✕';
+    const cColor = cg.ok ? '' : ';text-decoration:line-through;color:var(--text3)';
+    html+=`<div style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:80px">
+      <div style="padding:14px;border-radius:6px;background:${bg};color:${fg};display:flex;justify-content:center;align-items:center;box-shadow:inset 0 0 0 1px rgba(128,128,128,0.2)">
+        <span style="font-size:22px;font-weight:700">Aa</span>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;line-height:1.3">
+        <span style="font-size:9px;color:var(--text2)">${labelFg} on ${labelBg}</span>
+        <span style="font-size:11px;font-weight:600;color:var(--text)${cColor}">${cc}:1 ${checkIcon}</span>
+      </div>
+    </div>`;
+  };
+
+  const savedUnique = [...new Set(saved)];
+  if (savedUnique.length === 0) {
+    const hex = hsl2hex(H,S,L);
+    addBlock(hex, '#ffffff', hex, 'White');
+    addBlock(hex, '#000000', hex, 'Black');
+  } else {
+    for (let i = 0; i < savedUnique.length; i++) {
+        const bg = savedUnique[i];
+        addBlock(bg, '#ffffff', bg, 'White');
+        addBlock(bg, '#000000', bg, 'Black');
+        for (let j = 0; j < savedUnique.length; j++) {
+            if (i === j) continue;
+            const fg = savedUnique[j];
+            addBlock(bg, fg, bg, fg);
+        }
+    }
+  }
+  contrastInfo.innerHTML=html;
+}
 
 function updatePreview(){const hex=hsl2hex(H,S,L);hexInput.value=hex;previewSwatch.style.background=hex;updateContrast()}
 function updateAll(){drawWheel();updateCursor();updatePreview();renderHarmony();hVal.textContent=H;sVal.textContent=S;lVal.textContent=L}
@@ -212,7 +251,11 @@ function makeSwatch(hex,addable){const d=document.createElement('div');d.classNa
 
 function renderHarmony(){harmonyRow.innerHTML='';getScheme().forEach(({h,s,l})=>{harmonyRow.appendChild(makeSwatch(hsl2hex(h,s,l),true))})}
 function addToSaved(hex){if(!saved.includes(hex)){saved.push(hex);renderSaved()}}
-function renderSaved(){if(!saved.length){savedRow.innerHTML='<span class="empty-msg">No colors saved yet</span>';return}savedRow.innerHTML='';saved.forEach(hex=>savedRow.appendChild(makeSwatch(hex,false)))}
+function renderSaved(){
+  if(!saved.length){savedRow.innerHTML='<span class="empty-msg">No colors saved yet</span>';}
+  else{savedRow.innerHTML='';saved.forEach(hex=>savedRow.appendChild(makeSwatch(hex,false)));}
+  updateContrast();
+}
 
 function toHSLStr(hex){const[h,s,l]=hex2hsl(hex);return`hsl(${h}, ${s}%, ${l}%)`}
 function getCode(){const colors=saved.length?saved:getScheme().map(({h,s,l})=>hsl2hex(h,s,l));
@@ -238,7 +281,7 @@ wrap.addEventListener('touchstart',e=>{dragging=true;handleWheel(e.touches[0])},
 document.addEventListener('touchmove',e=>{if(dragging)handleWheel(e.touches[0])},{passive:true});
 document.addEventListener('touchend',()=>dragging=false);
 
-document.querySelectorAll('.stab').forEach(btn=>{btn.onclick=()=>{document.querySelectorAll('.stab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');scheme=btn.dataset.scheme;renderHarmony()}});
+document.querySelectorAll('.stab').forEach(btn=>{btn.onclick=()=>{document.querySelectorAll('.stab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');scheme=btn.dataset.scheme;renderHarmony();updateContrast()}});
 document.getElementById('addBtn').onclick=()=>{addToSaved(hsl2hex(H,S,L));toast('Saved!')};
 document.getElementById('copyHex').onclick=()=>{navigator.clipboard.writeText(hsl2hex(H,S,L));toast('Copied!')};
 document.getElementById('clearBtn').onclick=()=>{saved=[];renderSaved()};
