@@ -225,7 +225,20 @@
 
     .stab {
       font-size: 10px;
-      padding: 4px 10px
+      padding: 6px 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px
+    }
+
+    .stab svg {
+      display: block;
+      opacity: 0.7
+    }
+
+    .stab.active svg {
+      opacity: 1
     }
 
     .stab.active {
@@ -602,13 +615,34 @@
         </div>
         <div class="section-label">Harmony</div>
         <div class="scheme-tabs">
-          <button class="stab active" data-scheme="complement">complement</button>
-          <button class="stab" data-scheme="triadic">triadic</button>
-          <button class="stab" data-scheme="analogous">analogous</button>
-          <button class="stab" data-scheme="split">split-complement</button>
-          <button class="stab" data-scheme="tetradic">tetradic</button>
-          <button class="stab" data-scheme="tints">tints</button>
-          <button class="stab" data-scheme="shades">shades</button>
+          <button class="stab active" data-scheme="complement">
+            <svg viewBox="0 0 22 22" width="22" height="22"><circle cx="11" cy="11" r="9" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.4"/><line x1="11" y1="11" x2="11" y2="2" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><line x1="11" y1="11" x2="11" y2="20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            complement
+          </button>
+          <button class="stab" data-scheme="triadic">
+            <svg viewBox="0 0 22 22" width="22" height="22"><circle cx="11" cy="11" r="9" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.4"/><line x1="11" y1="11" x2="11" y2="2" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><line x1="11" y1="11" x2="18.8" y2="15.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="11" y1="11" x2="3.2" y2="15.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            triadic
+          </button>
+          <button class="stab" data-scheme="analogous">
+            <svg viewBox="0 0 22 22" width="22" height="22"><circle cx="11" cy="11" r="9" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.4"/><line x1="11" y1="11" x2="6.5" y2="3.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="11" y1="11" x2="8.7" y2="2.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="11" y1="11" x2="11" y2="2" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><line x1="11" y1="11" x2="13.3" y2="2.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="11" y1="11" x2="15.5" y2="3.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            analogous
+          </button>
+          <button class="stab" data-scheme="split">
+            <svg viewBox="0 0 22 22" width="22" height="22"><circle cx="11" cy="11" r="9" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.4"/><line x1="11" y1="11" x2="11" y2="2" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><line x1="11" y1="11" x2="15.5" y2="18.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="11" y1="11" x2="6.5" y2="18.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            split-complement
+          </button>
+          <button class="stab" data-scheme="tetradic">
+            <svg viewBox="0 0 22 22" width="22" height="22"><circle cx="11" cy="11" r="9" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.4"/><line x1="11" y1="11" x2="11" y2="2" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><line x1="11" y1="11" x2="20" y2="11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="11" y1="11" x2="11" y2="20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="11" y1="11" x2="2" y2="11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            tetradic
+          </button>
+          <button class="stab" data-scheme="tints">
+            <svg viewBox="0 0 22 22" width="22" height="22"><circle cx="11" cy="11" r="9" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.4"/><line x1="11" y1="11" x2="9.75" y2="2.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="11" y1="11" x2="10.37" y2="2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="11" y1="11" x2="11" y2="2" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><line x1="11" y1="11" x2="11.63" y2="2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="11" y1="11" x2="12.25" y2="2.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            tints
+          </button>
+          <button class="stab" data-scheme="shades">
+            <svg viewBox="0 0 22 22" width="22" height="22"><circle cx="11" cy="11" r="9" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.4"/><line x1="11" y1="11" x2="9.25" y2="2.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="11" y1="11" x2="10.2" y2="2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="11" y1="11" x2="11" y2="2" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><line x1="11" y1="11" x2="11.8" y2="2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="11" y1="11" x2="12.75" y2="2.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            shades
+          </button>
         </div>
       </div>
     </div>
