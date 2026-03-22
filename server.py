@@ -14,6 +14,7 @@ STATIC_FILE = Path('/app/index.html')
 DEFAULT_MAX = 20
 OLLAMA_HOST = os.environ.get('OLLAMA_HOST', 'host.docker.internal')
 OLLAMA_PORT = int(os.environ.get('OLLAMA_PORT', 11434))
+OLLAMA_MODEL = os.environ.get('OLLAMA_MODEL', 'smollm2:latest')
 
 
 def load_palettes():
@@ -33,7 +34,7 @@ def load_config():
     try:
         return json.loads(CONFIG_FILE.read_text())
     except Exception:
-        return {'max_palettes': DEFAULT_MAX, 'llm_provider': 'ollama', 'llm_model': 'llama3.2'}
+        return {'max_palettes': DEFAULT_MAX, 'llm_provider': 'ollama', 'llm_model': OLLAMA_MODEL}
 
 
 def save_config(cfg):
@@ -117,7 +118,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 cfg = {
                     'max_palettes': max_p,
                     'llm_provider': body.get('llm_provider', 'ollama'),
-                    'llm_model': body.get('llm_model', 'llama3.2'),
+                    'llm_model': body.get('llm_model', 'smollm2:latest'),
                 }
                 save_config(cfg)
                 self.send_json(200, cfg)
@@ -133,7 +134,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 if not prompt:
                     return self.send_json(400, {'error': 'prompt required'})
 
-                model = cfg.get('llm_model', 'llama3.2')
+                model = cfg.get('llm_model', 'smollm2:latest')
                 system = (
                     'You are a color palette generator. Given a mood or description, '
                     'respond ONLY with valid JSON: {"colors": ["#rrggbb", ...]} '

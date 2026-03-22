@@ -330,7 +330,7 @@ async function loadConfig() {
   try {
     const cfg = await apiFetch('/api/config');
     document.getElementById('maxInput').value = cfg.max_palettes ?? 20;
-    document.getElementById('llmModelInput').value = cfg.llm_model ?? 'llama3.2';
+    document.getElementById('llmModelInput').value = cfg.llm_model ?? 'smollm2:latest';
   } catch(_) {}
 }
 
@@ -393,8 +393,8 @@ document.getElementById('aiBtn').onclick = async () => {
       label.textContent = hex;
       label.style.color = isLight(hex) ? 'rgba(0,0,0,.8)' : 'rgba(255,255,255,.9)';
       swatch.appendChild(label);
-      swatch.onclick = () => { addToSaved(hex); toast('Saved ' + hex); };
-      swatch.title = 'Click to save';
+      swatch.onclick = () => { [H,S,L] = hex2hsl(hex); hSlider.value = H; sSlider.value = S; lSlider.value = L; updateAll(); toast('Applied ' + hex); };
+      swatch.title = 'Click to apply';
       row.appendChild(swatch);
     });
     toast('Suggested: ' + colors.length + ' colors');
