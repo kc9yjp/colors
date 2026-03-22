@@ -50,7 +50,7 @@ def fetch_url(url, base_scheme='https'):
             port = int(port_str)
         conn = http.client.HTTPSConnection(host, port, timeout=15) if parsed.scheme == 'https' else http.client.HTTPConnection(host, port, timeout=15)
         try:
-            conn.request('GET', path, headers={'User-Agent': 'Mozilla/5.0 (compatible; DevPalette/1.0)'})
+            conn.request('GET', path, headers={'User-Agent': 'Mozilla/5.0 (compatible; DevPalette/1.0)', 'Accept-Encoding': 'gzip'})
             resp = conn.getresponse()
             if resp.status in (301, 302, 303, 307, 308):
                 location = resp.getheader('Location')
@@ -67,7 +67,13 @@ def fetch_url(url, base_scheme='https'):
             if resp.status != 200:
                 logger.error(f'Failed to fetch {url}: HTTP {resp.status}')
                 raise Exception(f'HTTP {resp.status} for {url}')
-            content = resp.read().decode('utf-8', errors='ignore')
+            
+            raw_data = resp.read()
+            if resp.getheader('Content-Encoding') == 'gzip':
+                import gzip
+                raw_data = gzip.decompress(raw_data)
+                
+            content = raw_data.decode('utf-8', errors='ignore')
             
             lower_content = content.lower()
             if "cloudflare" in lower_content and ("attention required" in lower_content or "just a moment..." in lower_content):
