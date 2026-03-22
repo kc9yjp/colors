@@ -1,0 +1,11 @@
+services:
+  devpalette:
+    build: .
+    ports:
+      - "3210:80"
+    volumes:
+      - palette_data:/data
+    restart: unless-stopped
+
+volumes:
+  palette_data:
