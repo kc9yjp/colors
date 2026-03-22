@@ -8,7 +8,7 @@ import re
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin
 
 logging.basicConfig(level=os.environ.get('LOG_LEVEL', 'INFO'), format='%(asctime)s [%(levelname)s] %(message)s')
 logger = logging.getLogger(__name__)
@@ -32,8 +32,6 @@ def save_palettes(palettes):
     tmp = DATA_FILE.with_suffix('.tmp')
     tmp.write_text(json.dumps(palettes, indent=2))
     os.replace(tmp, DATA_FILE)
-
-
 def fetch_url(url, base_scheme='https'):
     for _ in range(10):
         parsed = urlparse(url)
@@ -50,7 +48,7 @@ def fetch_url(url, base_scheme='https'):
         if ':' in host:
             host, port_str = host.rsplit(':', 1)
             port = int(port_str)
-        conn = http.client.HTTPSConnection(host, timeout=15) if parsed.scheme == 'https' else http.client.HTTPConnection(host, timeout=15)
+        conn = http.client.HTTPSConnection(host, port, timeout=15) if parsed.scheme == 'https' else http.client.HTTPConnection(host, port, timeout=15)
         try:
             conn.request('GET', path, headers={'User-Agent': 'Mozilla/5.0 (compatible; DevPalette/1.0)'})
             resp = conn.getresponse()
@@ -61,16 +59,32 @@ def fetch_url(url, base_scheme='https'):
                     url = location
                     base_scheme = parsed.scheme
                     continue
-                raise Exception('Redirect without Location header')
+                raise Exception(f'Redirect without Location header for {url}')
+            if resp.status in (401, 403, 406, 429):
+                logger.warning(f'[BLOCKED?] {url} returned HTTP {resp.status}')
+                raise Exception(f'HTTP {resp.status} (Likely blocked) for {url}')
+            
             if resp.status != 200:
                 logger.error(f'Failed to fetch {url}: HTTP {resp.status}')
-                raise Exception(f'HTTP {resp.status}')
+                raise Exception(f'HTTP {resp.status} for {url}')
             content = resp.read().decode('utf-8', errors='ignore')
+            
+            lower_content = content.lower()
+            if "cloudflare" in lower_content and ("attention required" in lower_content or "just a moment..." in lower_content):
+                logger.warning(f'[BLOCKED?] {url} returned Cloudflare challenge')
+            elif "aws-waf" in lower_content or ("request blocked" in lower_content and "cloud" in lower_content) or ("403 error" in lower_content and "amazon" in lower_content) or "aws web application firewall" in lower_content:
+                logger.warning(f'[BLOCKED?] {url} returned AWS WAF block')
+            elif "enable javascript and cookies to continue" in lower_content or "please verify you are a human" in lower_content:
+                logger.warning(f'[BLOCKED?] {url} returned generic bot challenge')
+                
+        except (TimeoutError, ConnectionRefusedError, ConnectionResetError) as e:
+            logger.warning(f'[BLOCKED/UNREACHABLE?] {url} connection failed: {e}')
+            raise Exception(f"Connection Error: {e} for {url}")
         finally:
             conn.close()
         logger.info(f'Fetched {url} ({len(content)} bytes)')
         return content, f'{parsed.scheme}://{parsed.netloc}'
-    raise Exception('Too many redirects')
+    raise Exception(f'Too many redirects for {url}')
 
 
 def fetch_linked_resources(html, base_url, progress_cb=None):
@@ -84,26 +98,28 @@ def fetch_linked_resources(html, base_url, progress_cb=None):
     fetched = 0
     
     for href in css_links[:10]:
-        filename = href.split('/')[-1][:40]
+        absolute_href = urljoin(base_url, href)
+        filename = absolute_href.split('/')[-1][:40]
         if progress_cb:
             progress_cb(f'Scanning {filename}…')
         try:
-            css_content, _ = fetch_url(href, base_scheme)
+            css_content, _ = fetch_url(absolute_href, base_scheme)
             content += '\n' + css_content
             fetched += 1
         except Exception as e:
-            logger.warning(f'Failed to fetch CSS {href}: {e}')
+            logger.warning(f'Failed to fetch CSS {absolute_href}: {e}')
     
     for src in js_links[:10]:
-        filename = src.split('/')[-1][:40]
+        absolute_src = urljoin(base_url, src)
+        filename = absolute_src.split('/')[-1][:40]
         if progress_cb:
             progress_cb(f'Scanning {filename}…')
         try:
-            js_content, _ = fetch_url(src, base_scheme)
+            js_content, _ = fetch_url(absolute_src, base_scheme)
             content += '\n' + js_content
             fetched += 1
         except Exception as e:
-            logger.warning(f'Failed to fetch JS {src}: {e}')
+            logger.warning(f'Failed to fetch JS {absolute_src}: {e}')
     
     logger.info(f'Processed {fetched} linked resources, total content: {len(content)} bytes')
     
@@ -155,10 +171,17 @@ def extract_colors(html):
     
     seen = set()
     unique = []
+    ignored_bw = 0
     for c in colors:
-        if c not in seen and c != '#000000' and c != '#ffffff' and c != '#fff' and c != '#000':
+        if c in ('#000000', '#ffffff', '#fff', '#000'):
+            ignored_bw += 1
+            continue
+        if c not in seen:
             seen.add(c)
             unique.append(c)
+            
+    if ignored_bw > 0:
+        logger.info(f'Ignored {ignored_bw} black/white colors')
     
     logger.info(f'Found {len(unique)} unique colors (after filtering)')
     
