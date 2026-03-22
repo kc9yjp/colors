@@ -4,7 +4,7 @@ services:
     ports:
       - "3210:80"
     volumes:
-      - ../palette_data:/data
+      - ./palette_data:/data
     environment:
       - OLLAMA_HOST=boss-mac.mermaid-ghost.ts.net
       - OLLAMA_PORT=11434
