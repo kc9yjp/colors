@@ -272,12 +272,16 @@
     .swatch-label {
       position: absolute;
       bottom: 5px;
-      left: 0;
-      right: 0;
+      left: 5px;
+      right: 5px;
       text-align: center;
       font-size: 9.5px;
       font-weight: 600;
-      text-shadow: 0 1px 3px rgba(0, 0, 0, .7), 0 0 6px rgba(0, 0, 0, .5)
+      background-color: rgba(235, 235, 235, 0.9);
+      color: #000;
+      padding: 3px 0;
+      border-radius: 4px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
     }
 
     .empty-msg {
@@ -511,7 +515,9 @@
 
       .swatch-label {
         font-size: 8px;
-        bottom: 3px
+        bottom: 3px;
+        left: 2px;
+        right: 2px;
       }
 
       .hex-row {
@@ -735,7 +741,7 @@
     }
 
     function isLight(hex) { const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16); return (r * 299 + g * 587 + b * 114) / 1000 > 145 }
-    function makeSwatch(hex, addable) { const d = document.createElement('div'); d.className = 'swatch'; d.style.background = hex; const lb = document.createElement('div'); lb.className = 'swatch-label'; lb.textContent = hex; lb.style.color = isLight(hex) ? 'rgba(0,0,0,.8)' : 'rgba(255,255,255,.9)'; d.appendChild(lb); d.onclick = () => { if (addable) { addToSaved(hex); toast('Saved ' + hex) } else { saved = saved.filter(c => c !== hex); renderSaved() } }; d.title = addable ? 'Click to save' : 'Click to remove'; return d }
+    function makeSwatch(hex, addable) { const d = document.createElement('div'); d.className = 'swatch'; d.style.background = hex; const lb = document.createElement('div'); lb.className = 'swatch-label'; lb.textContent = hex; d.appendChild(lb); d.onclick = () => { if (addable) { addToSaved(hex); toast('Saved ' + hex) } else { saved = saved.filter(c => c !== hex); renderSaved() } }; d.title = addable ? 'Click to save' : 'Click to remove'; return d }
 
     function renderHarmony() { harmonyRow.innerHTML = ''; getScheme().forEach(({ h, s, l }) => { harmonyRow.appendChild(makeSwatch(hsl2hex(h, s, l), true)) }) }
     function addToSaved(hex) { if (!saved.includes(hex)) { saved.push(hex); renderSaved() } }
@@ -991,7 +997,6 @@
           const label = document.createElement('div');
           label.className = 'swatch-label';
           label.textContent = hex;
-          label.style.color = isLight(hex) ? 'rgba(0,0,0,.8)' : 'rgba(255,255,255,.9)';
           swatch.appendChild(label);
           swatch.onclick = () => { [H, S, L] = hex2hsl(hex); hSlider.value = H; sSlider.value = S; lSlider.value = L; updateAll(); toast('Applied ' + hex); };
           swatch.title = 'Click to apply';
