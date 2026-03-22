@@ -652,7 +652,7 @@
     const hSlider = document.getElementById('hSlider'), sSlider = document.getElementById('sSlider'), lSlider = document.getElementById('lSlider');
     const hVal = document.getElementById('hVal'), sVal = document.getElementById('sVal'), lVal = document.getElementById('lVal');
     const hexInput = document.getElementById('hexInput'), previewSwatch = document.getElementById('previewSwatch');
-    const harmonyRow = document.getElementById('harmonyRow'), savedRow = document.getElementById('savedRow');
+    const harmonyRow = document.getElementById('harmonyRow');
     const codeOut = document.getElementById('codeOut'), contrastInfo = document.getElementById('contrastInfo');
     let H = 210, S = 80, L = 55, scheme = 'complement', saved = [], fmt = 'css';
 
@@ -737,8 +737,6 @@
     function renderHarmony() { harmonyRow.innerHTML = ''; getScheme().forEach(({ h, s, l }) => { harmonyRow.appendChild(makeSwatch(hsl2hex(h, s, l), true)) }) }
     function addToSaved(hex) { if (!saved.includes(hex)) { saved.push(hex); renderSaved() } }
     function renderSaved() {
-      if (!saved.length) { savedRow.innerHTML = '<span class="empty-msg">No colors saved yet</span>'; }
-      else { savedRow.innerHTML = ''; saved.forEach(hex => savedRow.appendChild(makeSwatch(hex, false))); }
       updateContrast();
     }
 
@@ -771,8 +769,7 @@
     document.querySelectorAll('.stab').forEach(btn => { btn.onclick = () => { document.querySelectorAll('.stab').forEach(b => b.classList.remove('active')); btn.classList.add('active'); scheme = btn.dataset.scheme; renderHarmony(); updateContrast() } });
     document.getElementById('addBtn').onclick = () => { addToSaved(hsl2hex(H, S, L)); toast('Saved!') };
     document.getElementById('copyHex').onclick = () => { navigator.clipboard.writeText(hsl2hex(H, S, L)); toast('Copied!') };
-    document.getElementById('clearBtn').onclick = () => { saved = []; renderSaved() };
-    document.getElementById('sortBtn').onclick = () => { saved.sort((a, b) => hex2hsl(a)[0] - hex2hsl(b)[0]); renderSaved() };
+
     document.querySelectorAll('[data-fmt]').forEach(btn => { btn.onclick = () => { fmt = btn.dataset.fmt; codeOut.textContent = getCode(); codeOut.style.display = 'block' } });
     document.getElementById('copyExport').onclick = () => { const t = codeOut.textContent; if (t) { navigator.clipboard.writeText(t); toast('Copied!') } else toast('Pick a format first') };
 
