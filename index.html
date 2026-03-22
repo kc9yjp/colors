@@ -126,6 +126,27 @@ input.num-input:focus{border-color:var(--accent)}
     </div>
   </div>
   <div class="palette-row" id="savedRow"><span class="empty-msg">No colors saved yet</span></div>
+  <div class="kw-row">
+    <input class="kw-input" id="kwInput" placeholder="keyword (e.g. sunset)" maxlength="40"/>
+    <button id="saveServerBtn" class="btn-primary">save to server ↑</button>
+  </div>
+
+  <div class="divider"></div>
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <div class="section-label">Server Palettes</div>
+    <button id="refreshBtn">refresh</button>
+  </div>
+  <div class="server-list" id="serverList"><span class="empty-msg">Loading…</span></div>
+
+  <div class="divider"></div>
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <div class="section-label">Config</div>
+    <div class="ctrl-row" style="flex:1;min-width:200px;margin:0">
+      <label>Max palettes</label>
+      <input class="num-input" id="maxInput" type="number" min="1" max="999" value="20"/>
+      <button id="saveConfigBtn">save</button>
+    </div>
+  </div>
 
   <div class="divider"></div>
   <div class="export-row">
@@ -222,6 +243,112 @@ document.getElementById('copyExport').onclick=()=>{const t=codeOut.textContent;i
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.opacity=1;clearTimeout(t._tid);t._tid=setTimeout(()=>t.style.opacity=0,1600)}
 
 updateAll();
+
+// ── Server API ────────────────────────────────────────────────────────
+async function apiFetch(path, opts) {
+  const r = await fetch(path, opts);
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+function renderServerList(palettes) {
+  const list = document.getElementById('serverList');
+  if (!palettes.length) {
+    list.innerHTML = '<span class="empty-msg">No server palettes yet</span>';
+    return;
+  }
+  list.innerHTML = '';
+  [...palettes].reverse().forEach(p => {
+    const item = document.createElement('div');
+    item.className = 'server-item';
+
+    const chips = document.createElement('div');
+    chips.className = 'server-chips';
+    p.colors.forEach(hex => {
+      const c = document.createElement('div');
+      c.className = 'chip';
+      c.style.background = hex;
+      c.title = hex;
+      chips.appendChild(c);
+    });
+
+    const kw = document.createElement('span');
+    kw.className = 'server-kw';
+    kw.textContent = p.keyword;
+
+    const meta = document.createElement('div');
+    meta.className = 'server-meta';
+    meta.textContent = `${p.colors.length} colors · ${new Date(p.saved_at).toLocaleDateString()}`;
+
+    const loadBtn = document.createElement('button');
+    loadBtn.textContent = 'load';
+    loadBtn.onclick = () => { saved = [...p.colors]; renderSaved(); toast('Loaded: ' + p.keyword); };
+
+    const delBtn = document.createElement('button');
+    delBtn.textContent = 'delete';
+    delBtn.onclick = async () => {
+      try {
+        await apiFetch('/api/palettes/' + p.id, {method: 'DELETE'});
+        toast('Deleted: ' + p.keyword);
+        loadServerPalettes();
+      } catch(e) { toast('Error: ' + e.message); }
+    };
+
+    item.append(chips, kw, loadBtn, delBtn, meta);
+    list.appendChild(item);
+  });
+}
+
+async function loadServerPalettes() {
+  try {
+    const palettes = await apiFetch('/api/palettes');
+    renderServerList(palettes);
+  } catch(e) {
+    document.getElementById('serverList').innerHTML =
+      '<span class="empty-msg" style="color:#f87171">Could not connect to server</span>';
+  }
+}
+
+async function loadConfig() {
+  try {
+    const cfg = await apiFetch('/api/config');
+    document.getElementById('maxInput').value = cfg.max_palettes ?? 20;
+  } catch(_) {}
+}
+
+document.getElementById('saveServerBtn').onclick = async () => {
+  const kw = document.getElementById('kwInput').value.trim();
+  if (!kw) { toast('Enter a keyword first'); return; }
+  const colors = saved.length ? saved : [hsl2hex(H, S, L)];
+  try {
+    await apiFetch('/api/palettes', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({keyword: kw, colors}),
+    });
+    document.getElementById('kwInput').value = '';
+    toast('Saved: ' + kw);
+    loadServerPalettes();
+  } catch(e) { toast('Error: ' + e.message); }
+};
+
+document.getElementById('refreshBtn').onclick = loadServerPalettes;
+
+document.getElementById('saveConfigBtn').onclick = async () => {
+  const v = parseInt(document.getElementById('maxInput').value, 10);
+  if (!v || v < 1) { toast('Invalid max value'); return; }
+  try {
+    await apiFetch('/api/config', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({max_palettes: v}),
+    });
+    toast('Config saved');
+  } catch(e) { toast('Error: ' + e.message); }
+};
+
+loadServerPalettes();
+loadConfig();
 </script>
 </body>
 </html>
