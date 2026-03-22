@@ -556,6 +556,7 @@
       <div class="input-tab-bar">
         <button class="input-tab active" data-tab="ai">✨ AI Prompt</button>
         <button class="input-tab" data-tab="url">🌐 URL Extract</button>
+        <button class="input-tab" data-tab="server">☁️ Saved</button>
       </div>
       <div class="input-tab-content active" id="tab-ai">
         <div class="ai-row">
@@ -569,6 +570,13 @@
           <input class="ai-input" id="urlInput" type="url" placeholder="https://example.com" maxlength="500" />
           <button id="urlBtn" class="btn-primary">🌐 extract</button>
         </div>
+      </div>
+      <div class="input-tab-content" id="tab-server">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <div class="section-label" style="margin:0;">Saved Palettes</div>
+          <button id="refreshBtn">refresh list</button>
+        </div>
+        <div class="server-list" id="serverList"><span class="empty-msg">Loading…</span></div>
       </div>
     </div>
     <div class="palette-row" id="aiRow"></div>
@@ -630,13 +638,6 @@
       <input class="kw-input" id="kwInput" placeholder="keyword (e.g. sunset)" maxlength="40" />
       <button id="saveServerBtn" class="btn-primary">save to server ↑</button>
     </div>
-
-    <div class="divider"></div>
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <div class="section-label">Server Palettes</div>
-      <button id="refreshBtn">refresh</button>
-    </div>
-    <div class="server-list" id="serverList"><span class="empty-msg">Loading…</span></div>
 
 
 
