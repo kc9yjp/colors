@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import http.client
 import http.server
 import json
 import os
@@ -11,6 +12,8 @@ DATA_FILE = Path('/data/palettes.json')
 CONFIG_FILE = Path('/data/config.json')
 STATIC_FILE = Path('/app/index.html')
 DEFAULT_MAX = 20
+OLLAMA_HOST = os.environ.get('OLLAMA_HOST', 'host.docker.internal')
+OLLAMA_PORT = int(os.environ.get('OLLAMA_PORT', 11434))
 
 
 def load_palettes():
@@ -30,7 +33,7 @@ def load_config():
     try:
         return json.loads(CONFIG_FILE.read_text())
     except Exception:
-        return {'max_palettes': DEFAULT_MAX}
+        return {'max_palettes': DEFAULT_MAX, 'llm_provider': 'ollama', 'llm_model': 'llama3.2'}
 
 
 def save_config(cfg):
@@ -111,9 +114,62 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 max_p = int(body.get('max_palettes', DEFAULT_MAX))
                 if max_p < 1:
                     return self.send_json(400, {'error': 'max_palettes must be >= 1'})
-                cfg = {'max_palettes': max_p}
+                cfg = {
+                    'max_palettes': max_p,
+                    'llm_provider': body.get('llm_provider', 'ollama'),
+                    'llm_model': body.get('llm_model', 'llama3.2'),
+                }
                 save_config(cfg)
                 self.send_json(200, cfg)
+
+            elif self.path == '/api/suggest':
+                cfg = load_config()
+                provider = cfg.get('llm_provider', 'ollama')
+                if provider != 'ollama':
+                    return self.send_json(400, {'error': f'Provider {provider} not supported yet'})
+
+                body = self.read_body()
+                prompt = str(body.get('prompt', '')).strip()
+                if not prompt:
+                    return self.send_json(400, {'error': 'prompt required'})
+
+                model = cfg.get('llm_model', 'llama3.2')
+                system = (
+                    'You are a color palette generator. Given a mood or description, '
+                    'respond ONLY with valid JSON: {"colors": ["#rrggbb", ...]} '
+                    'where you return 5-7 hex color codes that match the mood. '
+                    'No explanation, no markdown, just the JSON.'
+                )
+                req_body = json.dumps({
+                    'model': model,
+                    'messages': [
+                        {'role': 'system', 'content': system},
+                        {'role': 'user', 'content': f'Generate a color palette for: {prompt}'},
+                    ],
+                    'stream': False,
+                }).encode()
+
+                try:
+                    conn = http.client.HTTPConnection(OLLAMA_HOST, OLLAMA_PORT, timeout=30)
+                    conn.request('POST', '/api/chat', req_body, {
+                        'Content-Type': 'application/json',
+                        'Content-Length': str(len(req_body)),
+                    })
+                    resp = conn.getresponse()
+                    if resp.status != 200:
+                        return self.send_json(502, {'error': f'Ollama error: {resp.read().decode()}'})
+                    data = json.loads(resp.read().decode())
+                    conn.close()
+                    content = data.get('message', {}).get('content', '')
+                    match = re.search(r'\{[^{}]*\}', content, re.DOTALL)
+                    if match:
+                        result = json.loads(match.group())
+                        colors = result.get('colors', [])
+                        if colors:
+                            return self.send_json(200, {'colors': colors})
+                    return self.send_json(200, {'colors': []})
+                except Exception as e:
+                    return self.send_json(502, {'error': f'Connection failed: {str(e)}'})
 
             else:
                 self.send_json(404, {'error': 'not found'})

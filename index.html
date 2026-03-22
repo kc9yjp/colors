@@ -65,6 +65,10 @@ input.kw-input::placeholder{color:var(--text3)}
 .server-meta{font-size:10px;color:var(--text3);width:100%;margin-top:-4px}
 input.num-input{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);font-family:var(--mono);font-size:12px;padding:4px 8px;width:64px;text-align:center;outline:none}
 input.num-input:focus{border-color:var(--accent)}
+.ai-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+input.ai-input{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);font-family:var(--mono);font-size:13px;padding:8px 12px;flex:1;min-width:180px;outline:none}
+input.ai-input:focus{border-color:var(--accent)}
+input.ai-input::placeholder{color:var(--text3)}
 @media(max-width:600px){
   body{padding:16px 12px}
   .top{grid-template-columns:1fr}
@@ -126,6 +130,15 @@ input.num-input:focus{border-color:var(--accent)}
     </div>
   </div>
   <div class="palette-row" id="savedRow"><span class="empty-msg">No colors saved yet</span></div>
+
+  <div class="divider"></div>
+  <div class="ai-row">
+    <input class="ai-input" id="aiPrompt" placeholder="describe a mood (e.g. tropical sunset, cyberpunk night)" maxlength="100"/>
+    <button id="aiBtn" class="btn-primary">✨ suggest</button>
+  </div>
+  <div class="palette-row" id="aiRow"></div>
+
+  <div class="divider"></div>
   <div class="kw-row">
     <input class="kw-input" id="kwInput" placeholder="keyword (e.g. sunset)" maxlength="40"/>
     <button id="saveServerBtn" class="btn-primary">save to server ↑</button>
@@ -144,8 +157,12 @@ input.num-input:focus{border-color:var(--accent)}
     <div class="ctrl-row" style="flex:1;min-width:200px;margin:0">
       <label>Max palettes</label>
       <input class="num-input" id="maxInput" type="number" min="1" max="999" value="20"/>
-      <button id="saveConfigBtn">save</button>
     </div>
+    <div class="ctrl-row" style="flex:1;min-width:200px;margin:0">
+      <label>LLM Model</label>
+      <input class="kw-input" id="llmModelInput" value="llama3.2" style="width:120px"/>
+    </div>
+    <button id="saveConfigBtn">save</button>
   </div>
 
   <div class="divider"></div>
@@ -313,6 +330,7 @@ async function loadConfig() {
   try {
     const cfg = await apiFetch('/api/config');
     document.getElementById('maxInput').value = cfg.max_palettes ?? 20;
+    document.getElementById('llmModelInput').value = cfg.llm_model ?? 'llama3.2';
   } catch(_) {}
 }
 
@@ -337,14 +355,55 @@ document.getElementById('refreshBtn').onclick = loadServerPalettes;
 document.getElementById('saveConfigBtn').onclick = async () => {
   const v = parseInt(document.getElementById('maxInput').value, 10);
   if (!v || v < 1) { toast('Invalid max value'); return; }
+  const model = document.getElementById('llmModelInput').value.trim();
+  if (!model) { toast('Enter an LLM model'); return; }
   try {
     await apiFetch('/api/config', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({max_palettes: v}),
+      body: JSON.stringify({max_palettes: v, llm_provider: 'ollama', llm_model: model}),
     });
     toast('Config saved');
   } catch(e) { toast('Error: ' + e.message); }
+};
+
+document.getElementById('aiBtn').onclick = async () => {
+  const prompt = document.getElementById('aiPrompt').value.trim();
+  if (!prompt) { toast('Enter a description first'); return; }
+  const btn = document.getElementById('aiBtn');
+  const row = document.getElementById('aiRow');
+  btn.disabled = true;
+  btn.textContent = '…';
+  row.innerHTML = '<span class="empty-msg">Thinking…</span>';
+  try {
+    const res = await apiFetch('/api/suggest', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({prompt}),
+    });
+    const colors = Array.isArray(res.colors) ? res.colors : [];
+    if (!colors.length) { row.innerHTML = '<span class="empty-msg">No colors returned</span>'; return; }
+    row.innerHTML = '';
+    colors.forEach(hex => {
+      const swatch = document.createElement('div');
+      swatch.className = 'swatch';
+      swatch.style.background = hex;
+      const label = document.createElement('div');
+      label.className = 'swatch-label';
+      label.textContent = hex;
+      label.style.color = isLight(hex) ? 'rgba(0,0,0,.8)' : 'rgba(255,255,255,.9)';
+      swatch.appendChild(label);
+      swatch.onclick = () => { addToSaved(hex); toast('Saved ' + hex); };
+      swatch.title = 'Click to save';
+      row.appendChild(swatch);
+    });
+    toast('Suggested: ' + colors.length + ' colors');
+  } catch(e) {
+    row.innerHTML = '<span class="empty-msg" style="color:#f87171">Error: ' + e.message + '</span>';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '✨ suggest';
+  }
 };
 
 loadServerPalettes();
