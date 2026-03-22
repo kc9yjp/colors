@@ -88,6 +88,12 @@ input.ai-input::placeholder{color:var(--text3)}
   <span>color wheel + harmony generator for developers</span>
 </header>
 <div class="app">
+  <div class="ai-row">
+    <input class="ai-input" id="aiPrompt" placeholder="describe a mood (e.g. tropical sunset, cyberpunk night)" maxlength="100"/>
+    <button id="aiBtn" class="btn-primary">✨ suggest</button>
+  </div>
+  <div class="palette-row" id="aiRow"></div>
+  <div class="divider"></div>
   <div class="top">
     <div id="wheelWrap">
       <canvas id="wheel" width="240" height="240"></canvas>
@@ -131,12 +137,7 @@ input.ai-input::placeholder{color:var(--text3)}
   </div>
   <div class="palette-row" id="savedRow"><span class="empty-msg">No colors saved yet</span></div>
 
-  <div class="divider"></div>
-  <div class="ai-row">
-    <input class="ai-input" id="aiPrompt" placeholder="describe a mood (e.g. tropical sunset, cyberpunk night)" maxlength="100"/>
-    <button id="aiBtn" class="btn-primary">✨ suggest</button>
-  </div>
-  <div class="palette-row" id="aiRow"></div>
+
 
   <div class="divider"></div>
   <div class="kw-row">
@@ -151,19 +152,7 @@ input.ai-input::placeholder{color:var(--text3)}
   </div>
   <div class="server-list" id="serverList"><span class="empty-msg">Loading…</span></div>
 
-  <div class="divider"></div>
-  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-    <div class="section-label">Config</div>
-    <div class="ctrl-row" style="flex:1;min-width:200px;margin:0">
-      <label>Max palettes</label>
-      <input class="num-input" id="maxInput" type="number" min="1" max="999" value="20"/>
-    </div>
-    <div class="ctrl-row" style="flex:1;min-width:200px;margin:0">
-      <label>LLM Model</label>
-      <input class="kw-input" id="llmModelInput" value="llama3.2" style="width:120px"/>
-    </div>
-    <button id="saveConfigBtn">save</button>
-  </div>
+
 
   <div class="divider"></div>
   <div class="export-row">
@@ -326,13 +315,7 @@ async function loadServerPalettes() {
   }
 }
 
-async function loadConfig() {
-  try {
-    const cfg = await apiFetch('/api/config');
-    document.getElementById('maxInput').value = cfg.max_palettes ?? 20;
-    document.getElementById('llmModelInput').value = cfg.llm_model ?? 'smollm2:latest';
-  } catch(_) {}
-}
+
 
 document.getElementById('saveServerBtn').onclick = async () => {
   const kw = document.getElementById('kwInput').value.trim();
@@ -352,20 +335,7 @@ document.getElementById('saveServerBtn').onclick = async () => {
 
 document.getElementById('refreshBtn').onclick = loadServerPalettes;
 
-document.getElementById('saveConfigBtn').onclick = async () => {
-  const v = parseInt(document.getElementById('maxInput').value, 10);
-  if (!v || v < 1) { toast('Invalid max value'); return; }
-  const model = document.getElementById('llmModelInput').value.trim();
-  if (!model) { toast('Enter an LLM model'); return; }
-  try {
-    await apiFetch('/api/config', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({max_palettes: v, llm_provider: 'ollama', llm_model: model}),
-    });
-    toast('Config saved');
-  } catch(e) { toast('Error: ' + e.message); }
-};
+
 
 document.getElementById('aiBtn').onclick = async () => {
   const prompt = document.getElementById('aiPrompt').value.trim();
@@ -406,8 +376,10 @@ document.getElementById('aiBtn').onclick = async () => {
   }
 };
 
+document.getElementById('aiPrompt').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('aiBtn').click(); });
+document.getElementById('kwInput').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('saveServerBtn').click(); });
+
 loadServerPalettes();
-loadConfig();
 </script>
 </body>
 </html>

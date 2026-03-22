@@ -9,9 +9,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 DATA_FILE = Path('/data/palettes.json')
-CONFIG_FILE = Path('/data/config.json')
 STATIC_FILE = Path('/app/index.html')
-DEFAULT_MAX = 20
+MAX_PALETTES = int(os.environ.get('MAX_PALETTES', 20))
 OLLAMA_HOST = os.environ.get('OLLAMA_HOST', 'host.docker.internal')
 OLLAMA_PORT = int(os.environ.get('OLLAMA_PORT', 11434))
 OLLAMA_MODEL = os.environ.get('OLLAMA_MODEL', 'smollm2:latest')
@@ -30,17 +29,7 @@ def save_palettes(palettes):
     os.replace(tmp, DATA_FILE)
 
 
-def load_config():
-    try:
-        return json.loads(CONFIG_FILE.read_text())
-    except Exception:
-        return {'max_palettes': DEFAULT_MAX, 'llm_provider': 'ollama', 'llm_model': OLLAMA_MODEL}
 
-
-def save_config(cfg):
-    tmp = CONFIG_FILE.with_suffix('.tmp')
-    tmp.write_text(json.dumps(cfg, indent=2))
-    os.replace(tmp, CONFIG_FILE)
 
 
 class Handler(http.server.BaseHTTPRequestHandler):
@@ -78,8 +67,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 self.wfile.write(body)
             elif self.path == '/api/palettes':
                 self.send_json(200, load_palettes())
-            elif self.path == '/api/config':
-                self.send_json(200, load_config())
+
             else:
                 self.send_json(404, {'error': 'not found'})
         except Exception as e:
@@ -104,37 +92,21 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 }
                 palettes = load_palettes()
                 palettes.append(record)
-                max_p = load_config().get('max_palettes', DEFAULT_MAX)
+                max_p = MAX_PALETTES
                 if len(palettes) > max_p:
                     palettes = palettes[-max_p:]  # FIFO: drop oldest
                 save_palettes(palettes)
                 self.send_json(201, record)
 
-            elif self.path == '/api/config':
-                body = self.read_body()
-                max_p = int(body.get('max_palettes', DEFAULT_MAX))
-                if max_p < 1:
-                    return self.send_json(400, {'error': 'max_palettes must be >= 1'})
-                cfg = {
-                    'max_palettes': max_p,
-                    'llm_provider': body.get('llm_provider', 'ollama'),
-                    'llm_model': body.get('llm_model', 'smollm2:latest'),
-                }
-                save_config(cfg)
-                self.send_json(200, cfg)
+
 
             elif self.path == '/api/suggest':
-                cfg = load_config()
-                provider = cfg.get('llm_provider', 'ollama')
-                if provider != 'ollama':
-                    return self.send_json(400, {'error': f'Provider {provider} not supported yet'})
-
                 body = self.read_body()
                 prompt = str(body.get('prompt', '')).strip()
                 if not prompt:
                     return self.send_json(400, {'error': 'prompt required'})
 
-                model = cfg.get('llm_model', 'smollm2:latest')
+                model = OLLAMA_MODEL
                 system = (
                     'You are a color palette generator. Given a mood or description, '
                     'respond ONLY with valid JSON: {"colors": ["#rrggbb", ...]} '
