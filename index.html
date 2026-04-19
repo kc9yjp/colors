@@ -652,7 +652,10 @@
     <div class="palette-row" id="harmonyRow"></div>
 
     <div class="divider"></div>
-    <div class="section-label">Contrast Preview</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <div class="section-label" style="margin:0;">Current Palette</div>
+      <button id="clearBtn">clear</button>
+    </div>
     <div class="contrast-info" id="contrastInfo"
       style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;width:100%"></div>
 
@@ -704,6 +707,12 @@
     function hueToXY(h) { const rad = h * Math.PI / 180; return { x: 120 + Math.cos(rad) * 90, y: 120 + Math.sin(rad) * 90 } }
     function updateCursor() { const { x, y } = hueToXY(H); cur.style.left = x + 'px'; cur.style.top = y + 'px'; cur.style.background = hsl2hex(H, S, L) }
 
+    function removeSavedColor(hex) {
+      saved = saved.filter(c => c !== hex);
+      renderSaved();
+      toast('Removed ' + hex);
+    }
+
     function updateContrast() {
       let html = '';
       const addBlock = (bg, fg, labelBg, labelFg) => {
@@ -714,7 +723,8 @@
         const passAA_normal = badge(cc >= 4.5);
         const passAA_large = badge(cc >= 3.0);
         html += `<div style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:180px">
-      <div style="padding:14px 16px;border-radius:6px;background:${bg};color:${fg};display:flex;flex-direction:column;gap:8px;box-shadow:inset 0 0 0 1px rgba(128,128,128,0.2)">
+      <div style="position:relative;padding:28px 16px 14px 16px;border-radius:6px;background:${bg};color:${fg};display:flex;flex-direction:column;gap:8px;box-shadow:inset 0 0 0 1px rgba(128,128,128,0.2)">
+        <button title="Remove ${bg} from palette" onclick="removeSavedColor('${bg}')" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.5" style="position:absolute;top:6px;right:6px;width:20px;height:20px;background:transparent;border:none;color:${fg};opacity:0.5;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;border-radius:50%;padding-bottom:2px;">×</button>
         <div style="display:flex;justify-content:space-between;align-items:center">
           <span style="font-size:14px;font-weight:400">Normal (4.5)</span>
           ${passAA_normal}
@@ -733,9 +743,7 @@
 
       const savedUnique = [...new Set(saved)];
       if (savedUnique.length === 0) {
-        const hex = hsl2hex(H, S, L);
-        addBlock(hex, '#ffffff', hex, 'White');
-        addBlock(hex, '#000000', hex, 'Black');
+        html = '<span class="empty-msg" style="grid-column: 1 / -1; margin-top: 10px;">Palette is empty</span>';
       } else {
         for (let i = 0; i < savedUnique.length; i++) {
           const bg = savedUnique[i];
@@ -804,6 +812,7 @@
     document.querySelectorAll('.stab').forEach(btn => { btn.onclick = () => { document.querySelectorAll('.stab').forEach(b => b.classList.remove('active')); btn.classList.add('active'); scheme = btn.dataset.scheme; renderHarmony(); updateContrast() } });
     document.getElementById('addBtn').onclick = () => { addToSaved(hsl2hex(H, S, L)); toast('Saved!') };
     document.getElementById('copyHex').onclick = () => { navigator.clipboard.writeText(hsl2hex(H, S, L)); toast('Copied!') };
+    document.getElementById('clearBtn').onclick = () => { saved = []; renderSaved(); toast('Cleared!'); };
 
     document.querySelectorAll('[data-fmt]').forEach(btn => { btn.onclick = () => { fmt = btn.dataset.fmt; codeOut.textContent = getCode(); codeOut.style.display = 'block' } });
     document.getElementById('copyExport').onclick = () => { const t = codeOut.textContent; if (t) { navigator.clipboard.writeText(t); toast('Copied!') } else toast('Pick a format first') };
